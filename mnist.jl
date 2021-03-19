@@ -13,8 +13,8 @@ begin
 	using Plots
 	
 	using LinearAlgebra
-	using RestrictedBoltzmannMachines
-	
+	using RBMS
+
 	function ingredients(path::String)
 		# this is from the Julia source code (evalfile in base/loading.jl)
 		# but with the modification that it returns the module instead of the last object
@@ -62,6 +62,7 @@ end
 # ╔═╡ ee6f97c2-7ffd-11eb-290e-8528cc56befb
 begin
 	using TensorBoardLogger, Logging, StatsBase
+	using RBMS: sample_hiddens, dΘ
 	
 	function make_hist(data)
   		hist = fit(Histogram, data[:])
@@ -143,7 +144,7 @@ begin
 
 					rbm = RBM(Float64, Unitary, Bernoulli, d, nh; X=train_x)
 
-					RBMjl.fit!(
+					RBMS.fit!(
 						rbm, train_x;
 						n_epochs=n_epochs,
 						logger=logger,
