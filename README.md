@@ -1,3 +1,3 @@
 # rbm-playground
 
-Experimenting with [RestrictedBoltzmannMachines.jl](https://github.com/fissoreg/RestrictedBoltzmannMachines.jl).
+Experimenting with [RBMS.jl](https://github.com/fissoreg/RBMS.jl).
