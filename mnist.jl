@@ -35,7 +35,7 @@ end
 begin
 	flatten(x) = reshape(x, :, size(x)[end])
 
-	function mnist(;T::Type=Float64)
+	function mnist(;T::Type=Float32)
 		train_x, _ = MNIST.traindata()
 		test_x,  _  = MNIST.testdata()
 
@@ -56,7 +56,7 @@ begin
 		colorview(Gray,f)
 	end
 
-	train_x, test_x = mnist()
+	train_x, test_x = mnist() .|> gpu
 	d, n = size(train_x)
 end
 
@@ -88,7 +88,7 @@ begin
 			#U, s, Vt = svd(rbm.W)
 
 			samples_img(init, k) = mnist_to_img(CDk(rbm, init, k)[3])
-			rand_init = rand(size(X, 1), 100)
+			rand_init = rand(size(X, 1), 100) |> gpu
 
 			with_logger(lg) do
 				@info "Pseudolikelihood" pl log_step_increment=1
@@ -128,9 +128,17 @@ end
 
 # ╔═╡ 69dd87ea-8966-11eb-31dc-7998fa04d9f0
 begin
+	# following lines are needed for GPU execution.
+	# TODO: how to get rid of the following tricks?
+	import RBMS: pseudolikelihood
+	# let's force CUDA compilation for `exp` on `Float32`.
+	exp(2f0)
+	# we need to fix the pseudolikelihood definition...
+	pseudolikelihood(rbm::AbstractRBM{Float32, V, H}, x::typeof(train_x)) where {V, H} = 0
+					
 	n_epochs = 100
 
-	αs = [0.1]
+	αs = [0.1f0]
 	bss = [100]
 	ks = [1]
 	nhs = [100]
@@ -144,9 +152,9 @@ begin
 					)
 					
 					# Define model and use GPU if available
-					rbm = RBM(Float64, Unitary, Bernoulli, d, nh; X=train_x) |> gpu
 					X = train_x |> gpu
-					
+					rbm = RBM(Float32, Unitary, Bernoulli, d, nh; X=train_x) |> gpu
+
 					RBMS.fit!(
 						rbm, X;
 						n_epochs=n_epochs,
