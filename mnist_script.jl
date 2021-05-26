@@ -60,7 +60,12 @@ function get_tb_logger(;dir="tensorboard_logs/run", test_data=Nothing)
 
 	lg = TBLogger(dir; step_increment=0)
 
-	function tb_logger(rbm, X, epoch, epoch_time, total_time)
+	# TODO: write a `@with_state` macro?
+	function tb_logger(rbm, X, state) #epoch, epoch_time, total_time)
+		epoch = state.epoch
+		epoch_time = state.t_last
+		total_time = state.t_total
+
 		batch = test_data[:, 1:1000]
 		n_pre = 20
 		pl = pseudolikelihood(rbm, batch)
@@ -101,7 +106,7 @@ function get_tb_logger(;dir="tensorboard_logs/run", test_data=Nothing)
 			# @info "Gradients"
 		end
 
-		rbm, X, epoch, epoch_time, total_time
+		rbm, X, state #epoch, epoch_time, total_time
 	end
 
 	tb_logger
@@ -154,7 +159,7 @@ train_x, test_x = mnist() .|> gpu
 d, n = size(train_x)
 
 logger = (args -> console_logger(args...)) ∘ get_tb_logger(;
-	dir="tensorboard/CD/k=$(args.k)_nh=$(args.hidden_nodes)_α=$(args.lr)_" *
+	dir="tensorboard/CDv2/k=$(args.k)_nh=$(args.hidden_nodes)_α=$(args.lr)_" *
 	    "bs=$args.batch_size",
 	test_data=test_x,
 )
