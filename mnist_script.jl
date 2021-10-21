@@ -86,12 +86,12 @@ function get_tb_logger(;dir="tensorboard_logs/run", test_data=Nothing)
 
 			@info "Samples" reconstructions=samples_img(batch, 1)
 			@info "Samples" test_10_steps=samples_img(batch, 10)
-			@info "Samples" test_100_steps=samples_img(batch, 100)
-			@info "Samples" test_1000_steps=samples_img(batch, 1000)
+			#@info "Samples" test_100_steps=samples_img(batch, 100)
+			#@info "Samples" test_1000_steps=samples_img(batch, 1000)
 			@info "Samples" rand_1_step=samples_img(rand_init, 1)
 			@info "Samples" rand_10_step=samples_img(rand_init, 10)
-			@info "Samples" rand_100_step=samples_img(rand_init, 100)
-			@info "Samples" rand_1000_step=samples_img(rand_init, 1000)
+			#@info "Samples" rand_100_step=samples_img(rand_init, 100)
+			#@info "Samples" rand_1000_step=samples_img(rand_init, 1000)
 
 			@info "Preactivations" preactivations=mnist_to_img(
 				sample_hiddens(rbm, batch[:, 1:n_pre]);
@@ -138,6 +138,14 @@ function parse_commandline()
 	        help = "number of hidden nodes"
 		arg_type = Int
 		default = 100
+	    "--sampler"
+	        help = "sampler: CDk/PCDk"
+		arg_type = String
+		default = "CDk"
+	    "--logdir"
+	        help = "where to store tensorboard logs"
+		arg_type = String
+		default = "log"
 	end
 
 	to_named_tuple(d) = (; zip(keys(d), values(d))...)
@@ -146,26 +154,32 @@ end
 
 args = parse_commandline()
 
-# hyperparameters ##############################################################
-n_epochs = 100
+samplers = Dict(
+  "CDk" => RBMS.CDk,
+  "PCDk" => RBMS.PCDk,
+  "RCDk" => RBMS.RCDk,
+  "RPCDk" => RBMS.RPCDk,
+)
 
-α = 0.1f0
-batch_size = 100
-k = 1
-nh = 100
+# hyperparameters ##############################################################
+#n_epochs = 100
+#
+#α = 0.1f0
+#batch_size = 100
+#k = 1
+#nh = 100
 
 # training #####################################################################
 train_x, test_x = mnist() .|> gpu
 d, n = size(train_x)
 
 logger = (args -> console_logger(args...)) ∘ get_tb_logger(;
-	dir="tensorboard/CDv2/k=$(args.k)_nh=$(args.hidden_nodes)_α=$(args.lr)_" *
-	    "bs=$args.batch_size",
+	dir=args.logdir,
 	test_data=test_x,
 )
 
 # Define model and use GPU if available
-rbm = RBM(Float32, Unitary, Bernoulli, d, nh; X=train_x) |> gpu
+rbm = RBM(Float32, Unitary, Bernoulli, d, args.hidden_nodes; X=train_x) |> gpu
 
 RBMS.fit!(
 	rbm, train_x;
@@ -174,4 +188,5 @@ RBMS.fit!(
 	batch_size=args.batch_size,
 	α=args.lr,
 	k=args.k,
+	sampler=samplers[args.sampler],
 )
